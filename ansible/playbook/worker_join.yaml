@@ -1,0 +1,39 @@
+---
+- name: Run script on client nodes
+  hosts: worker  # Specify the target hosts or group where the script should be executed
+  become: true  # Run tasks with sudo privileges
+
+  tasks:
+    - name: Copy join.sh script to client nodes
+      copy:
+        src: ./join.sh  # Path to your local join.sh script
+        dest: /tmp/join.sh  # Destination path on the remote host
+        mode: '0755'  # Ensure executable permissions
+      register: copy_result
+
+    - name: Run join.sh script on each worker node
+      shell: sudo sh /tmp/join.sh
+      register: join_result
+
+    - name: Display script execution result
+      debug:
+        msg: "Script execution on {{ ansible_hostname }} returned with exit code {{ join_result.rc }}"
+      when: join_result.rc is defined
+
+    - name: Fail task if script execution failed
+      fail:
+        msg: "Script execution on {{ ansible_hostname }} failed with exit code {{ join_result.rc }}"
+      when: join_result.rc != 0
+
+  handlers:
+    - name: Clean up join.sh script
+      file:
+        path: /tmp/join.sh
+        state: absent
+      when: copy_result.changed  # Remove join.sh only if it was copied
+
+    - name: Clean up joined.txt file
+      file:
+        path: /tmp/joined.txt
+        state: absent
+      when: join_result.rc == 0  # Remove joined.txt if script was successfully executed

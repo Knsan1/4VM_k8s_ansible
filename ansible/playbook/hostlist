@@ -1,0 +1,7 @@
+[master]
+master-node
+
+[worker]
+worker-node01
+worker-node02
+worker-node03
